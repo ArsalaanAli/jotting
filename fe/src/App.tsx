@@ -137,7 +137,7 @@ function App() {
       formData.append("image", blob, "canvas.png");
 
       axios
-        .post("https://your-api.com/upload", formData, {
+        .post("http://localhost:8080/image", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
