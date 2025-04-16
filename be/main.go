@@ -1,14 +1,92 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, Go server on Windows!")
+}
+
+func sendImage(w http.ResponseWriter, r *http.Request){
+	 imgBytes, err := os.ReadFile("uploaded_canvas.png")
+    if err != nil {
+        panic(err)
+    }
+
+    err = godotenv.Load()
+    if err != nil {
+        log.Fatalf("Error loading .env file")
+    }
+
+    apiKey := os.Getenv("OPENROUTER_API_KEY")
+    if apiKey == "" {
+        log.Fatal("API key not found in environment")
+    }
+
+    // Encode to base64
+    encoded := base64.StdEncoding.EncodeToString(imgBytes)
+    dataURI := fmt.Sprintf("data:image/jpeg;base64,%s", encoded)
+
+    // Build request payload
+    payload := map[string]interface{}{
+        "model": "qwen/qwen2.5-vl-72b-instruct:free",
+        "messages": []map[string]interface{}{
+            {
+                "role": "user",
+                "content": []map[string]interface{}{
+                    {
+                        "type": "text",
+                        "text": "What is in this image?",
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": map[string]interface{}{
+                            "url": dataURI,
+                        },
+                    },
+                },
+            },
+        },
+    }
+
+    // Convert to JSON
+    jsonData, err := json.Marshal(payload)
+    if err != nil {
+        panic(err)
+    }
+
+    // Make HTTP request
+    req, err := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
+    if err != nil {
+        panic(err)
+    }
+
+    // Replace with your OpenRouter API key
+    req.Header.Set("Authorization", "Bearer " + apiKey)
+    req.Header.Set("Content-Type", "application/json")
+
+    // Send request
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+
+    // Read and print response
+    body, _ := ioutil.ReadAll(resp.Body)
+    fmt.Println(string(body))
 }
 
 func imageHandler(w http.ResponseWriter, r *http.Request) {
@@ -52,6 +130,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/image", imageHandler)
+    http.HandleFunc("/sendImage", sendImage)
 	
 	fmt.Println("Server listening on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
