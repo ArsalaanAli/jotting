@@ -14,24 +14,31 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const llmModel = "qwen/qwen2.5-vl-72b-instruct:free"
+
+var apiKey string
+
+func init() {
+	// Automatically called before main()
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	apiKey = os.Getenv("OPENROUTER_API_KEY")
+	if apiKey == "" {
+		log.Fatal("API key not found in environment")
+	}
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, Go server on Windows!")
 }
 
 func sendImage(w http.ResponseWriter, r *http.Request){
-	 imgBytes, err := os.ReadFile("uploaded_canvas.png")
+	imgBytes, err := os.ReadFile("uploaded_canvas.png")
     if err != nil {
         panic(err)
-    }
-
-    err = godotenv.Load()
-    if err != nil {
-        log.Fatalf("Error loading .env file")
-    }
-
-    apiKey := os.Getenv("OPENROUTER_API_KEY")
-    if apiKey == "" {
-        log.Fatal("API key not found in environment")
     }
 
     // Encode to base64
@@ -72,7 +79,6 @@ func sendImage(w http.ResponseWriter, r *http.Request){
         panic(err)
     }
 
-    // Replace with your OpenRouter API key
     req.Header.Set("Authorization", "Bearer " + apiKey)
     req.Header.Set("Content-Type", "application/json")
 
