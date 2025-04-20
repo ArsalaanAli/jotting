@@ -17,6 +17,7 @@ import (
 const llmModel = "qwen/qwen2.5-vl-72b-instruct:free"
 
 var apiKey string
+var question string
 
 func init() {
 	// Automatically called before main()
@@ -133,10 +134,44 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Image uploaded successfully: %s\n", handler.Filename)
 }
 
+func setQuestion(w http.ResponseWriter, r *http.Request){
+	var data map[string]interface{}
+
+
+	bodyBytes, _ := io.ReadAll(r.Body)
+	fmt.Println("Raw body:", string(bodyBytes))
+
+	// Reset body so json.Decoder can still read it
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	err := json.NewDecoder(r.Body).Decode(&data)
+
+
+	if err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	fmt.Println("HERE1")
+
+
+	question, ok := data["question"].(string)
+	if !ok {
+		http.Error(w, "Missing or invalid 'question' field", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println("HERE2")
+
+	fmt.Println("Received question:", question)
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/image", imageHandler)
     http.HandleFunc("/sendImage", sendImage)
+    http.HandleFunc("/setQuestion", setQuestion)
+
 	
 	fmt.Println("Server listening on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)

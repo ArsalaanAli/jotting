@@ -14,6 +14,8 @@ function App() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPoint, setLastPoint] = useState<Point | null>(null);
   const [currentTool, setCurrentTool] = useState<Tool>("draw");
+  const [question, setQuestion] = useState("Unquestiond Canvas");
+  const [inputQuestion, setInputQuestion] = useState("");
 
   const drawGrid = (
     ctx: CanvasRenderingContext2D,
@@ -122,7 +124,7 @@ function App() {
   const stopDrawing = () => {
     setIsDrawing(false);
     setLastPoint(null);
-    screenshotCanvasAndPost();
+    // screenshotCanvasAndPost();
   };
 
   const screenshotCanvasAndPost = () => {
@@ -151,19 +153,71 @@ function App() {
     }, "image/png");
   };
 
+  const updateQuestion = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (inputQuestion.trim()) {
+      try {
+        await axios.post("http://localhost:8080/setQuestion", {
+          question: inputQuestion.trim(),
+        });
+        setQuestion(inputQuestion.trim());
+        setInputQuestion("");
+      } catch (error) {
+        console.error("Error posting question:", error);
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-gray-900">
+      {/* question Display */}
+      <p className="fixed top-4 left-1/2 -translate-x-1/2 text-xl text-white font-semibold">
+        {question}
+      </p>
+
+      {/* question Search Bar */}
+      <div className="fixed top-4 right-4 flex items-center gap-2 bg-gray-800 p-2 rounded-lg shadow-lg">
+        <form onSubmit={updateQuestion} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={inputQuestion}
+            onChange={(e) => setInputQuestion(e.target.value)}
+            placeholder="Enter question"
+            className="bg-gray-700 text-white px-3 py-1 rounded outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            title="Update question"
+            className="text-gray-300 hover:text-white"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 16l-4-4m0 0l4-4m-4 4h12"
+              />
+            </svg>
+          </button>
+        </form>
+      </div>
+
       <canvas
         ref={canvasRef}
         className="w-full h-full bg-gray-950 cursor-crosshair"
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
-        // onMouseOut={stopDrawing}
       />
 
       {/* Toolbar */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800 rounded-lg shadow-lg p-2 flex gap-2">
+      <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-gray-800 rounded-lg shadow-lg p-2 flex gap-2">
         <button
           onClick={() => setCurrentTool("draw")}
           className={`p-2 rounded ${
